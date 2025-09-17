@@ -22,3 +22,14 @@ Thumbs.db
 games/
 *.log
 publish/
+
+# Python scripts (not needed for static dashboard)
+geoguessr_extractor.py
+geoguessr_scraper.py
+geoguessr_scraper_advanced.py
+mhtml_parser.py
+mhtml_cli.py
+cli.py
+scheduler.py
+serve_dashboard.py
+update_github.py

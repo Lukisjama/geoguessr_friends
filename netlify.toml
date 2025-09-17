@@ -9,8 +9,10 @@
   functions = ""
 
 [build.environment]
-  # No environment variables needed
+  # Use Node.js for static site generation (even though we don't need it)
   NODE_VERSION = "18"
+  # Disable Python to prevent pip installs
+  PYTHON_VERSION = ""
 
 # Redirect rules for SPA-like behavior
 [[redirects]]
