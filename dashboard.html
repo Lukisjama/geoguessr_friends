@@ -199,6 +199,53 @@
             background: rgba(102, 126, 234, 0.2);
             transform: translateY(-1px);
         }
+        
+        .challenges-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .challenges-table th,
+        .challenges-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .challenges-table th {
+            background-color: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .challenges-table tr:hover {
+            background-color: #f7fafc;
+        }
+        
+        .challenge-id {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #2d3748;
+        }
+        
+        .download-cell {
+            text-align: center;
+        }
+        
+        .status-cell {
+            text-align: center;
+        }
+        
+        .status-loaded {
+            color: #38a169;
+            font-weight: 500;
+        }
+        
+        .status-missing {
+            color: #e53e3e;
+            font-weight: 500;
+        }
 
         .chart-container {
             position: relative;
@@ -342,6 +389,13 @@
                 </div>
             </div>
 
+            <div class="card">
+                <h2>🎯 Challenges</h2>
+                <div id="challengesTable">
+                    <!-- Challenges table will be populated here -->
+                </div>
+            </div>
+
             <div class="dashboard">
                 <div class="leaderboard">
                     <h2>🏆 Leaderboard - Most Wins</h2>
@@ -429,13 +483,14 @@
         }
 
         // Initialize dashboard
-        function initializeDashboard() {
+        async function initializeDashboard() {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             
             populateFilters();
             updateStats();
             createPlayerStatsTable();
+            await createChallengesTable();
             updateLeaderboards();
             
             // Add event listeners
@@ -563,7 +618,6 @@
                             <th>Avg Total Score</th>
                             <th>Max Round Score</th>
                             <th>Max Total Score</th>
-                            <th>Download Links</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -583,15 +637,6 @@
                 const maxRoundScore = Math.max(...stats.roundScores);
                 const maxTotalScore = Math.max(...stats.totalScores);
                 
-                // Get unique challenge IDs for this player
-                const playerChallenges = filteredData.filter(row => row.player_name === player);
-                const uniqueChallenges = [...new Set(playerChallenges.map(row => row.challenge_id).filter(id => id))];
-                
-                // Create download links
-                const downloadLinks = uniqueChallenges.map(challengeId => 
-                    `<a href="https://www.geoguessr.com/challenge/${challengeId}" target="_blank" class="download-link">${challengeId.substring(0, 8)}...</a>`
-                ).join('<br>');
-                
                 tableHTML += `
                     <tr>
                         <td class="player-name">${player}</td>
@@ -601,7 +646,6 @@
                         <td class="stat-value">${avgTotalScore.toLocaleString()}</td>
                         <td class="stat-value">${maxRoundScore.toLocaleString()}</td>
                         <td class="stat-value">${maxTotalScore.toLocaleString()}</td>
-                        <td class="download-links">${downloadLinks || 'No challenges'}</td>
                     </tr>
                 `;
             });
@@ -614,9 +658,91 @@
             document.getElementById('playerStatsTable').innerHTML = tableHTML;
         }
 
+        // Create challenges table
+        async function createChallengesTable() {
+            const filteredData = getFilteredData();
+            
+            // Load challenges data
+            const challengesData = await loadChallengesData();
+            
+            // Get all unique challenge IDs from the data
+            const challengeIds = [...new Set(filteredData.map(row => row.challenge_id).filter(id => id))];
+            
+            // Use challenges from summary CSV if available, otherwise use CSV data
+            const allChallengeIds = challengesData.length > 0 ? 
+                challengesData.map(c => c.challenge_id) : 
+                [...new Set(challengeIds)];
+            
+            // Create table HTML
+            let tableHTML = `
+                <table class="challenges-table">
+                    <thead>
+                        <tr>
+                            <th>Challenge ID</th>
+                            <th>Download Link</th>
+                            <th>Data Loaded</th>
+                            <th>Players</th>
+                            <th>Games</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Sort challenges by ID
+            allChallengeIds.sort();
+            
+            allChallengeIds.forEach(challengeId => {
+                // Check if data is loaded (has entries in CSV)
+                const challengeData = filteredData.filter(row => row.challenge_id === challengeId);
+                const isDataLoaded = challengeData.length > 0;
+                
+                // Get unique players for this challenge
+                const players = [...new Set(challengeData.map(row => row.player_name))];
+                const playerCount = players.length;
+                const gameCount = challengeData.length;
+                
+                // Create download link
+                const downloadLink = `<a href="https://www.geoguessr.com/challenge/${challengeId}" target="_blank" class="download-link">Download</a>`;
+                
+                // Data loaded status
+                const dataStatus = isDataLoaded ? 
+                    `<span class="status-loaded">✅ Yes (${gameCount} games)</span>` : 
+                    `<span class="status-missing">❌ No</span>`;
+                
+                tableHTML += `
+                    <tr>
+                        <td class="challenge-id">${challengeId}</td>
+                        <td class="download-cell">${downloadLink}</td>
+                        <td class="status-cell">${dataStatus}</td>
+                        <td class="stat-value">${playerCount}</td>
+                        <td class="stat-value">${gameCount}</td>
+                    </tr>
+                `;
+            });
+            
+            // Add a note about missing challenges
+            if (allChallengeIds.length === 0) {
+                tableHTML += `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #718096; padding: 20px;">
+                            No challenges found. Add .mhtml files to see challenges here.
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('challengesTable').innerHTML = tableHTML;
+        }
+
         // Update dashboard based on filters
-        function updateDashboard() {
+        async function updateDashboard() {
             createPlayerStatsTable();
+            await createChallengesTable();
             updateLeaderboards();
         }
 
@@ -787,8 +913,32 @@
             return totalMinutes;
         }
 
-        // Load data when page loads
-        document.addEventListener('DOMContentLoaded', loadData);
+        // Load challenges data
+        async function loadChallengesData() {
+            try {
+                const response = await fetch('challenges_summary.csv');
+                const csvText = await response.text();
+                const lines = csvText.split('\n');
+                const headers = lines[0].split(',');
+                
+                const challenges = [];
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim()) {
+                        const values = lines[i].split(',');
+                        const challenge = {};
+                        headers.forEach((header, index) => {
+                            challenge[header] = values[index] || '';
+                        });
+                        challenges.push(challenge);
+                    }
+                }
+                
+                return challenges;
+            } catch (error) {
+                console.log('Challenges summary CSV not found, using CSV data only');
+                return [];
+            }
+        }
     </script>
 </body>
 </html>
