@@ -178,6 +178,27 @@
             font-weight: 500;
             color: #667eea;
         }
+        
+        .download-links {
+            font-size: 0.8rem;
+            max-width: 150px;
+        }
+        
+        .download-link {
+            color: #667eea;
+            text-decoration: none;
+            display: inline-block;
+            margin: 2px 0;
+            padding: 2px 4px;
+            border-radius: 4px;
+            background: rgba(102, 126, 234, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .download-link:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
 
         .chart-container {
             position: relative;
@@ -542,6 +563,7 @@
                             <th>Avg Total Score</th>
                             <th>Max Round Score</th>
                             <th>Max Total Score</th>
+                            <th>Download Links</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -561,6 +583,15 @@
                 const maxRoundScore = Math.max(...stats.roundScores);
                 const maxTotalScore = Math.max(...stats.totalScores);
                 
+                // Get unique challenge IDs for this player
+                const playerChallenges = filteredData.filter(row => row.player_name === player);
+                const uniqueChallenges = [...new Set(playerChallenges.map(row => row.challenge_id).filter(id => id))];
+                
+                // Create download links
+                const downloadLinks = uniqueChallenges.map(challengeId => 
+                    `<a href="https://www.geoguessr.com/challenge/${challengeId}" target="_blank" class="download-link">${challengeId.substring(0, 8)}...</a>`
+                ).join('<br>');
+                
                 tableHTML += `
                     <tr>
                         <td class="player-name">${player}</td>
@@ -570,6 +601,7 @@
                         <td class="stat-value">${avgTotalScore.toLocaleString()}</td>
                         <td class="stat-value">${maxRoundScore.toLocaleString()}</td>
                         <td class="stat-value">${maxTotalScore.toLocaleString()}</td>
+                        <td class="download-links">${downloadLinks || 'No challenges'}</td>
                     </tr>
                 `;
             });
