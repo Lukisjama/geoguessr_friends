@@ -9,7 +9,7 @@ import webbrowser
 import os
 from pathlib import Path
 
-def start_server(port=8000):
+def start_server(port=8080):
     """Start a local HTTP server to serve the dashboard"""
     
     # Change to the script directory
