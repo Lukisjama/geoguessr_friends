@@ -484,19 +484,34 @@
 
         // Initialize dashboard
         async function initializeDashboard() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            
-            populateFilters();
-            updateStats();
-            createPlayerStatsTable();
-            await createChallengesTable();
-            updateLeaderboards();
-            
-            // Add event listeners
-            document.getElementById('playerFilter').addEventListener('change', updateDashboard);
-            document.getElementById('gameFilter').addEventListener('change', updateDashboard);
-            document.getElementById('mapFilter').addEventListener('change', updateDashboard);
+            try {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                populateFilters();
+                updateStats();
+                createPlayerStatsTable();
+                
+                // Try to load challenges table, but don't let it block the dashboard
+                try {
+                    await createChallengesTable();
+                } catch (error) {
+                    console.log('Challenges table failed to load:', error);
+                    document.getElementById('challengesTable').innerHTML = '<p style="color: #718096; text-align: center; padding: 20px;">Challenges table unavailable</p>';
+                }
+                
+                updateLeaderboards();
+                
+                // Add event listeners
+                document.getElementById('playerFilter').addEventListener('change', updateDashboard);
+                document.getElementById('gameFilter').addEventListener('change', updateDashboard);
+                document.getElementById('mapFilter').addEventListener('change', updateDashboard);
+                
+                console.log('Dashboard initialized successfully');
+            } catch (error) {
+                console.error('Dashboard initialization failed:', error);
+                document.getElementById('loading').innerHTML = '<p style="color: #e53e3e;">Error loading dashboard. Please refresh the page.</p>';
+            }
         }
 
         // Populate filter dropdowns
@@ -741,9 +756,20 @@
 
         // Update dashboard based on filters
         async function updateDashboard() {
-            createPlayerStatsTable();
-            await createChallengesTable();
-            updateLeaderboards();
+            try {
+                createPlayerStatsTable();
+                
+                // Try to update challenges table, but don't let it block
+                try {
+                    await createChallengesTable();
+                } catch (error) {
+                    console.log('Challenges table update failed:', error);
+                }
+                
+                updateLeaderboards();
+            } catch (error) {
+                console.error('Dashboard update failed:', error);
+            }
         }
 
         // Update leaderboards
@@ -917,6 +943,9 @@
         async function loadChallengesData() {
             try {
                 const response = await fetch('challenges_summary.csv');
+                if (!response.ok) {
+                    throw new Error('File not found');
+                }
                 const csvText = await response.text();
                 const lines = csvText.split('\n');
                 const headers = lines[0].split(',');
@@ -933,6 +962,7 @@
                     }
                 }
                 
+                console.log(`Loaded ${challenges.length} challenges from summary CSV`);
                 return challenges;
             } catch (error) {
                 console.log('Challenges summary CSV not found, using CSV data only');
