@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GeoGuessr Results Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -294,14 +292,6 @@
                     <select id="gameFilter">
                         <option value="all">All Games</option>
                     </select>
-                    
-                    <label for="chartType">Chart Type:</label>
-                    <select id="chartType">
-                        <option value="totalPoints">Total Points</option>
-                        <option value="avgPoints">Average Points per Round</option>
-                        <option value="totalSteps">Total Steps</option>
-                        <option value="avgDuration">Average Duration</option>
-                    </select>
                 </div>
             </div>
 
@@ -332,39 +322,18 @@
             </div>
 
             <div class="dashboard">
-                <div class="card">
-                    <h2>📊 Performance Over Time</h2>
-                    <div class="chart-container">
-                        <canvas id="performanceChart"></canvas>
+                <div class="leaderboard">
+                    <h2>🏆 Leaderboard - Most Wins</h2>
+                    <div id="winsLeaderboardContent">
+                        <!-- Wins leaderboard will be populated here -->
                     </div>
                 </div>
 
-                <div class="card">
-                    <h2>🎯 Round-by-Round Analysis</h2>
-                    <div class="chart-container">
-                        <canvas id="roundsChart"></canvas>
+                <div class="leaderboard">
+                    <h2>📊 Leaderboard - Average Total Points</h2>
+                    <div id="pointsLeaderboardContent">
+                        <!-- Points leaderboard will be populated here -->
                     </div>
-                </div>
-
-                <div class="card">
-                    <h2>⏱️ Duration vs Points</h2>
-                    <div class="chart-container">
-                        <canvas id="scatterChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>👥 Player Comparison</h2>
-                    <div class="chart-container">
-                        <canvas id="comparisonChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="leaderboard">
-                <h2>🏆 Overall Leaderboard</h2>
-                <div id="leaderboardContent">
-                    <!-- Leaderboard will be populated here -->
                 </div>
             </div>
         </div>
@@ -446,14 +415,12 @@
             populateFilters();
             updateStats();
             createPlayerStatsTable();
-            createCharts();
-            updateLeaderboard();
+            updateLeaderboards();
             
             // Add event listeners
-            document.getElementById('playerFilter').addEventListener('change', updateCharts);
-            document.getElementById('gameFilter').addEventListener('change', updateCharts);
-            document.getElementById('mapFilter').addEventListener('change', updateCharts);
-            document.getElementById('chartType').addEventListener('change', updateCharts);
+            document.getElementById('playerFilter').addEventListener('change', updateDashboard);
+            document.getElementById('gameFilter').addEventListener('change', updateDashboard);
+            document.getElementById('mapFilter').addEventListener('change', updateDashboard);
         }
 
         // Populate filter dropdowns
@@ -587,224 +554,20 @@
             document.getElementById('playerStatsTable').innerHTML = tableHTML;
         }
 
-        // Create all charts
-        function createCharts() {
-            createPerformanceChart();
-            createRoundsChart();
-            createScatterChart();
-            createComparisonChart();
-        }
-
-        // Performance over time chart
-        function createPerformanceChart() {
-            const ctx = document.getElementById('performanceChart').getContext('2d');
-            
-            const filteredData = getFilteredData();
-            const playerData = {};
-            
-            filteredData.forEach(row => {
-                const player = row.player_name;
-                const score = parseInt(row.total_points) || 0;
-                const game = row.challenge_title || row.file_name;
-                
-                if (!playerData[player]) {
-                    playerData[player] = [];
-                }
-                playerData[player].push({ game, score });
-            });
-            
-            const datasets = Object.keys(playerData).map((player, index) => ({
-                label: player,
-                data: playerData[player].map(point => point.score),
-                borderColor: getPlayerColor(index),
-                backgroundColor: getPlayerColor(index, 0.1),
-                tension: 0.4,
-                fill: false
-            }));
-            
-            charts.performance = new Chart(ctx, {
-                type: 'line',
-                data: { datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Total Points'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Round-by-round analysis chart
-        function createRoundsChart() {
-            const ctx = document.getElementById('roundsChart').getContext('2d');
-            
-            const filteredData = getFilteredData();
-            const roundAverages = {};
-            
-            for (let round = 1; round <= 5; round++) {
-                const scores = filteredData.map(row => parseInt(row[`round_${round}_points`]) || 0);
-                roundAverages[`Round ${round}`] = scores.length > 0 ? 
-                    Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-            }
-            
-            charts.rounds = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(roundAverages),
-                    datasets: [{
-                        label: 'Average Points',
-                        data: Object.values(roundAverages),
-                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                        borderColor: 'rgba(102, 126, 234, 1)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Average Points'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Duration vs Points scatter chart
-        function createScatterChart() {
-            const ctx = document.getElementById('scatterChart').getContext('2d');
-            
-            const filteredData = getFilteredData();
-            const scatterData = filteredData.map(row => {
-                const duration = parseDuration(row.total_duration);
-                const points = parseInt(row.total_points) || 0;
-                return { x: duration, y: points };
-            }).filter(point => point.x > 0 && point.y > 0);
-            
-            charts.scatter = new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Duration vs Points',
-                        data: scatterData,
-                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
-                        borderColor: 'rgba(102, 126, 234, 1)',
-                        pointRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Duration (minutes)'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Total Points'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Player comparison chart
-        function createComparisonChart() {
-            const ctx = document.getElementById('comparisonChart').getContext('2d');
-            
-            const filteredData = getFilteredData();
-            const playerStats = {};
-            
-            filteredData.forEach(row => {
-                const player = row.player_name;
-                if (!playerStats[player]) {
-                    playerStats[player] = {
-                        totalPoints: 0,
-                        totalSteps: 0,
-                        games: 0
-                    };
-                }
-                
-                playerStats[player].totalPoints += parseInt(row.total_points) || 0;
-                playerStats[player].totalSteps += parseInt(row.total_steps) || 0;
-                playerStats[player].games += 1;
-            });
-            
-            const players = Object.keys(playerStats);
-            const avgPoints = players.map(player => 
-                Math.round(playerStats[player].totalPoints / playerStats[player].games)
-            );
-            
-            charts.comparison = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: players,
-                    datasets: [{
-                        data: avgPoints,
-                        backgroundColor: players.map((_, index) => getPlayerColor(index, 0.8)),
-                        borderColor: players.map((_, index) => getPlayerColor(index, 1)),
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        }
-                    }
-                }
-            });
-        }
-
-        // Update charts based on filters
-        function updateCharts() {
-            Object.values(charts).forEach(chart => chart.destroy());
-            createCharts();
+        // Update dashboard based on filters
+        function updateDashboard() {
             createPlayerStatsTable();
-            updateLeaderboard();
+            updateLeaderboards();
         }
 
-        // Get filtered data based on current filters
-        function getFilteredData() {
-            const playerFilter = document.getElementById('playerFilter').value;
-            const gameFilter = document.getElementById('gameFilter').value;
-            const mapFilter = document.getElementById('mapFilter').value;
-            
-            return gameData.filter(row => {
-                const playerMatch = playerFilter === 'all' || row.player_name === playerFilter;
-                const gameMatch = gameFilter === 'all' || 
-                    (row.challenge_title || row.file_name) === gameFilter;
-                const mapMatch = mapFilter === 'all' || row.map_name === mapFilter;
-                return playerMatch && gameMatch && mapMatch;
-            });
+        // Update leaderboards
+        function updateLeaderboards() {
+            updateWinsLeaderboard();
+            updatePointsLeaderboard();
         }
 
-        // Update leaderboard
-        function updateLeaderboard() {
+        // Update wins leaderboard
+        function updateWinsLeaderboard() {
             const filteredData = getFilteredData();
             const playerStats = {};
             
@@ -828,11 +591,12 @@
                 }
             });
             
+            // Sort by wins (descending)
             const sortedPlayers = Object.keys(playerStats).sort((a, b) => 
-                playerStats[b].totalPoints - playerStats[a].totalPoints
+                playerStats[b].wins - playerStats[a].wins
             );
             
-            const leaderboardContent = document.getElementById('leaderboardContent');
+            const leaderboardContent = document.getElementById('winsLeaderboardContent');
             leaderboardContent.innerHTML = '';
             
             sortedPlayers.forEach((player, index) => {
@@ -853,6 +617,77 @@
                     </div>
                 `;
                 leaderboardContent.appendChild(row);
+            });
+        }
+
+        // Update points leaderboard
+        function updatePointsLeaderboard() {
+            const filteredData = getFilteredData();
+            const playerStats = {};
+            
+            filteredData.forEach(row => {
+                const player = row.player_name;
+                if (!playerStats[player]) {
+                    playerStats[player] = {
+                        totalPoints: 0,
+                        totalSteps: 0,
+                        games: 0,
+                        wins: 0
+                    };
+                }
+                
+                playerStats[player].totalPoints += parseInt(row.total_points) || 0;
+                playerStats[player].totalSteps += parseInt(row.total_steps) || 0;
+                playerStats[player].games += 1;
+                
+                if (parseInt(row.position) === 1) {
+                    playerStats[player].wins += 1;
+                }
+            });
+            
+            // Sort by average total points (descending)
+            const sortedPlayers = Object.keys(playerStats).sort((a, b) => {
+                const avgA = playerStats[a].totalPoints / playerStats[a].games;
+                const avgB = playerStats[b].totalPoints / playerStats[b].games;
+                return avgB - avgA;
+            });
+            
+            const leaderboardContent = document.getElementById('pointsLeaderboardContent');
+            leaderboardContent.innerHTML = '';
+            
+            sortedPlayers.forEach((player, index) => {
+                const stats = playerStats[player];
+                const avgPoints = Math.round(stats.totalPoints / stats.games);
+                const avgSteps = Math.round(stats.totalSteps / stats.games);
+                
+                const row = document.createElement('div');
+                row.className = 'player-row';
+                row.innerHTML = `
+                    <div class="player-rank">${index + 1}</div>
+                    <div class="player-name">${player}</div>
+                    <div class="player-stats">
+                        <span>🏆 ${stats.wins} wins</span>
+                        <span>📊 ${avgPoints.toLocaleString()} avg pts</span>
+                        <span>👣 ${avgSteps} avg steps</span>
+                        <span>🎮 ${stats.games} games</span>
+                    </div>
+                `;
+                leaderboardContent.appendChild(row);
+            });
+        }
+
+        // Get filtered data based on current filters
+        function getFilteredData() {
+            const playerFilter = document.getElementById('playerFilter').value;
+            const gameFilter = document.getElementById('gameFilter').value;
+            const mapFilter = document.getElementById('mapFilter').value;
+            
+            return gameData.filter(row => {
+                const playerMatch = playerFilter === 'all' || row.player_name === playerFilter;
+                const gameMatch = gameFilter === 'all' || 
+                    (row.challenge_title || row.file_name) === gameFilter;
+                const mapMatch = mapFilter === 'all' || row.map_name === mapFilter;
+                return playerMatch && gameMatch && mapMatch;
             });
         }
 
