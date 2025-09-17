@@ -301,8 +301,8 @@
                     <div class="stat-label">Total Games</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="totalPlayers">-</div>
-                    <div class="stat-label">Players</div>
+                    <div class="stat-number" id="worstScore">-</div>
+                    <div class="stat-label">Worst Score</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="avgScore">-</div>
@@ -310,7 +310,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="bestScore">-</div>
-                    <div class="stat-label">Best Score</div>
+                    <div class="stat-label" id="bestScoreLabel">Best Score</div>
                 </div>
             </div>
 
@@ -458,15 +458,43 @@
         // Update statistics
         function updateStats() {
             const totalGames = new Set(gameData.map(row => row.file_name)).size;
-            const totalPlayers = new Set(gameData.map(row => row.player_name)).size;
             const scores = gameData.map(row => parseInt(row.total_points) || 0).filter(score => score > 0);
             const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-            const bestScore = Math.max(...scores, 0);
+            
+            // Find best score and player
+            let bestScore = 0;
+            let bestPlayer = '';
+            let worstScore = Infinity;
+            let worstPlayer = '';
+            
+            gameData.forEach(row => {
+                const score = parseInt(row.total_points) || 0;
+                if (score > 0) {
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestPlayer = row.player_name;
+                    }
+                    if (score < worstScore) {
+                        worstScore = score;
+                        worstPlayer = row.player_name;
+                    }
+                }
+            });
             
             document.getElementById('totalGames').textContent = totalGames;
-            document.getElementById('totalPlayers').textContent = totalPlayers;
+            document.getElementById('worstScore').textContent = worstScore === Infinity ? '0' : worstScore.toLocaleString();
             document.getElementById('avgScore').textContent = avgScore.toLocaleString();
             document.getElementById('bestScore').textContent = bestScore.toLocaleString();
+            document.getElementById('bestScoreLabel').textContent = `Best Score by ${bestPlayer}`;
+            
+            // Add worst score info as a subtitle
+            const worstScoreElement = document.getElementById('worstScore');
+            const worstScoreLabel = worstScoreElement.parentElement.querySelector('.stat-label');
+            if (worstScore !== Infinity) {
+                worstScoreLabel.textContent = `Worst Score by ${worstPlayer}`;
+            } else {
+                worstScoreLabel.textContent = 'Worst Score';
+            }
         }
 
         // Create player statistics table
