@@ -1,0 +1,13 @@
+{
+  "name": "geoguessr-dashboard",
+  "version": "1.0.0",
+  "description": "GeoGuessr competition dashboard",
+  "main": "dashboard.html",
+  "scripts": {
+    "build": "echo 'No build needed - static files'",
+    "start": "echo 'Static files ready'"
+  },
+  "keywords": ["geoguessr", "dashboard", "competition"],
+  "author": "Lukas",
+  "license": "MIT"
+}

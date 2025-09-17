@@ -1,0 +1,28 @@
+[build]
+  # No build command needed for static files
+  command = ""
+  
+  # Publish directory is the root
+  publish = "."
+  
+  # No functions directory needed
+  functions = ""
+
+[build.environment]
+  # No environment variables needed
+  NODE_VERSION = "18"
+
+# Redirect rules for SPA-like behavior
+[[redirects]]
+  from = "/"
+  to = "/dashboard.html"
+  status = 200
+
+# Headers for CORS (if needed)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
